@@ -13,6 +13,7 @@ TocGenerator -d <docs folder> [-o <output folder>] [-vsi]
 -s, --sequence        Use the .order files for TOC sequence. Format are raws of: filename-without-extension
 -r, --override        Use the .override files for TOC file name override. Format are raws of: filename-without-extension;Title you want
 -i, --index           Auto-generate a file index in each folder.
+-m, --markdown        Output in markdown instead of yaml.
 --help                Display this help screen.
 --version             Display version information.
 ```
