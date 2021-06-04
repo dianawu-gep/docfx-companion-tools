@@ -45,5 +45,11 @@ namespace TocDocFxCreation.Domain
         /// </summary>
         [Option('i', "index", Required = false, HelpText = "Auto-generate a file index in each folder.")]
         public bool AutoIndex { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to output to .md format.
+        /// </summary>
+        [Option('m', "markdown", Required = false, HelpText = "Make ToC in .md format.")]
+        public bool Markdown { get; set; }
     }
 }

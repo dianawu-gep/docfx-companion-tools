@@ -79,21 +79,24 @@ namespace DocFxTocGenerate
             TocItem tocRootItems = new TocItem();
             DirectoryInfo rootDir = new DirectoryInfo(options.DocFolder);
             WalkDirectoryTree(rootDir, tocRootItems);
+            string outext = options.Markdown ? "toc.md" : "toc.yml";
 
             // we have the TOC, so serialize to a string
             using (StringWriter sw = new StringWriter())
             {
-                using (IndentedTextWriter writer = new IndentedTextWriter(sw, "  "))
+                string indent = options.Markdown ? "#" : "  ";
+                using (IndentedTextWriter writer = new IndentedTextWriter(sw, indent))
                 {
-                    writer.WriteLine("# This is an automatically generated file");
-                    Serialize(writer, tocRootItems, true);
+                    string comment = options.Markdown ? "<!-- This is an automatically generated file -->" : "# This is an automatically generated file";
+                    writer.WriteLine(comment);
+                    Serialize(writer, tocRootItems, true, options.Markdown);
                 }
 
                 // now write the TOC to disc
-                File.WriteAllText(Path.Combine(options.OutputFolder, "toc.yml"), sw.ToString());
+                File.WriteAllText(Path.Combine(options.OutputFolder, outext), sw.ToString());
             }
 
-            message.Verbose($"{Path.Combine(options.OutputFolder, "toc.yml")} created.");
+            message.Verbose($"{Path.Combine(options.OutputFolder, outext)} created.");
         }
 
         /// <summary>
@@ -166,7 +169,6 @@ namespace DocFxTocGenerate
             message.Verbose($"Process {folder.FullName} for files.");
 
             List<FileInfo> files = folder.GetFiles("*.md").OrderBy(f => f.Name)
-                .Where(f => f.Name.ToUpperInvariant() != "INDEX.MD")
                 .ToList();
             if (files == null)
             {
@@ -176,7 +178,7 @@ namespace DocFxTocGenerate
 
             foreach (FileInfo fi in files)
             {
-                if (fi.Name.StartsWith(".", StringComparison.OrdinalIgnoreCase))
+                if (fi.Name.StartsWith(".", StringComparison.OrdinalIgnoreCase) || fi.Name.StartsWith("toc", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -439,6 +441,7 @@ namespace DocFxTocGenerate
         /// <param name="writer">Writer to use for output.</param>
         /// <param name="tocItem">the toc item to serialize.</param>
         /// <param name="isRoot">Is this the root, then we don't indent extra.</param>
+        /// <param name="markdown">Serialize with markdown convention.</param>
         /// <remarks>The representation is like this:
         /// items:
         /// - name: Document One
@@ -453,16 +456,31 @@ namespace DocFxTocGenerate
         ///   - name: Sub Document One
         ///     href: sub-folder/sub-document-one.md.
         /// </remarks>
-        private static void Serialize(IndentedTextWriter writer, TocItem tocItem, bool isRoot = false)
+        private static void Serialize(IndentedTextWriter writer, TocItem tocItem, bool isRoot = false, bool markdown = false)
         {
             if (!string.IsNullOrEmpty(tocItem.Title))
             {
-                writer.WriteLine($"- name: {tocItem.Title}");
+                if (markdown)
+                {
+                    writer.Write($"# [{tocItem.Title}]");
+                }
+                else
+                {
+                    writer.WriteLine($"- name: {tocItem.Title}");
+                }
             }
 
             if (!string.IsNullOrEmpty(tocItem.Href))
             {
-                writer.WriteLine($"  href: {tocItem.Href}");
+                if (markdown)
+                {
+                    writer.Write($"({tocItem.Href})");
+                    writer.WriteLine();
+                }
+                else
+                {
+                    writer.WriteLine($"  href: {tocItem.Href}");
+                }
             }
 
             if (tocItem.Items != null)
@@ -472,10 +490,14 @@ namespace DocFxTocGenerate
                     writer.Indent++;
                 }
 
-                writer.WriteLine("items:");
+                if (!markdown)
+                {
+                    writer.WriteLine("items:");
+                }
+
                 foreach (TocItem toc in tocItem.Items)
                 {
-                    Serialize(writer, toc);
+                    Serialize(writer, toc, false, markdown);
                 }
 
                 if (!isRoot)
